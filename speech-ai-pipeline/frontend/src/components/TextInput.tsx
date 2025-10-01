@@ -12,7 +12,7 @@ import {
   Clear,
 } from '@mui/icons-material';
 import { processTextPipeline } from '../api';
-import { SelectedProviders, SelectedModels } from '../types';
+import { SelectedProviders, SelectedModels, ChatMessage } from '../types';
 
 interface TextInputProps {
   selectedProviders: SelectedProviders;
@@ -21,6 +21,8 @@ interface TextInputProps {
   onProcessingStart: () => void;
   onProcessingComplete: (audioUrl: string, metadata: any) => void;
   onProcessingError: (error: string) => void;
+  messages: ChatMessage[];
+  onUpdateMessages: (messages: ChatMessage[]) => void;
 }
 
 export const TextInput: React.FC<TextInputProps> = ({
@@ -30,6 +32,8 @@ export const TextInput: React.FC<TextInputProps> = ({
   onProcessingStart,
   onProcessingComplete,
   onProcessingError,
+  messages,
+  onUpdateMessages,
 }) => {
   const [inputText, setInputText] = useState('');
   const [lastProcessedText, setLastProcessedText] = useState('');
@@ -55,6 +59,7 @@ export const TextInput: React.FC<TextInputProps> = ({
         llm_temperature: 0.7,
         tts_speed: 1.0,
         tts_pitch: 0.0,
+        llm_messages: messages,
       });
       
       const responseAudioUrl = URL.createObjectURL(result.blob);
@@ -67,6 +72,15 @@ export const TextInput: React.FC<TextInputProps> = ({
       };
       
       onProcessingComplete(responseAudioUrl, metadata);
+      // Update chat history
+      const userText = metadata.inputText || inputText;
+      const assistantText = metadata.responseText || '';
+      const updated: ChatMessage[] = [
+        ...messages,
+        { role: 'user' as const, content: userText as string },
+        ...(assistantText ? [{ role: 'assistant' as const, content: assistantText as string }] : []),
+      ];
+      onUpdateMessages(updated);
       
       // Clear input after successful processing
       setInputText('');
@@ -80,6 +94,7 @@ export const TextInput: React.FC<TextInputProps> = ({
   const clearText = () => {
     setInputText('');
     setLastProcessedText('');
+    onUpdateMessages([]);
   };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
@@ -103,15 +118,6 @@ export const TextInput: React.FC<TextInputProps> = ({
         disabled={loading}
         sx={{ mb: 2 }}
       />
-
-      {/* Last Processed Text */}
-      {lastProcessedText && !loading && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Last processed:</strong> {lastProcessedText}
-          </Typography>
-        </Alert>
-      )}
 
       {/* Controls */}
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -145,18 +151,7 @@ export const TextInput: React.FC<TextInputProps> = ({
         </Box>
       )}
 
-      {/* Instructions */}
-      <Box sx={{ mt: 'auto', pt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          ✏️ Type your message and click "Process Text"
-          <br />
-          🧠 Text will be sent to your selected LLM provider
-          <br />
-          🔊 The response will be converted to speech and played
-          <br />
-          ⌨️ Use Ctrl+Enter as a shortcut to process
-        </Typography>
-      </Box>
+      {/* Instructions removed as requested */}
     </Box>
   );
 }; 

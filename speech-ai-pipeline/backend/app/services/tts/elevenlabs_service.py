@@ -1,5 +1,5 @@
 import os
-from elevenlabs import generate, voices, Voice
+from elevenlabs.client import ElevenLabs
 from typing import List, Dict, Optional
 import tempfile
 import asyncio
@@ -9,6 +9,7 @@ class ElevenLabsService:
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
         if self.api_key:
             os.environ["ELEVENLABS_API_KEY"] = self.api_key
+        self.client = ElevenLabs(api_key=self.api_key) if self.api_key else None
     
     async def synthesize(
         self,
@@ -28,26 +29,34 @@ class ElevenLabsService:
         
         try:
             def _synthesize():
-                # Use default voice if none specified
-                voice_to_use = voice or "Rachel"
-                
-                # Generate audio
-                audio = generate(
+                voice_name_to_id = {
+                    "Rachel": "21m00Tcm4TlvDq8ikWAM",
+                    "Drew": "29vD33N1CtxCmqQRPOHJ",
+                    "Clyde": "2EiwWnXFnvU5JabPnv8n",
+                    "Paul": "5Q0t7uMcjvnagumLfvZi",
+                }
+                selected = voice or "Rachel"
+                voice_id = voice_name_to_id.get(selected, selected)
+
+                audio = self.client.text_to_speech.convert(
                     text=text,
-                    voice=Voice(voice_id=voice_to_use) if voice_to_use in ["Rachel", "Drew", "Clyde", "Paul"] else voice_to_use,
-                    model="eleven_multilingual_v2"
+                    voice_id=voice_id,
+                    model_id="eleven_multilingual_v2",
+                    output_format="mp3_44100_128",
                 )
-                
-                return audio
-            
-            # Run in thread pool to avoid blocking
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
+                    if isinstance(audio, (bytes, bytearray)):
+                        temp_file.write(audio)
+                    else:
+                        for chunk in audio:
+                            if isinstance(chunk, (bytes, bytearray)):
+                                temp_file.write(chunk)
+                    return temp_file.name
+
             loop = asyncio.get_event_loop()
-            audio_content = await loop.run_in_executor(None, _synthesize)
-            
-            # Save to temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
-                temp_file.write(audio_content)
-                return temp_file.name
+            audio_file = await loop.run_in_executor(None, _synthesize)
+            return audio_file
         
         except Exception as e:
             raise Exception(f"ElevenLabs synthesis failed: {str(e)}")
@@ -59,19 +68,20 @@ class ElevenLabsService:
         
         try:
             def _get_voices():
-                return voices()
-            
+                response = self.client.voices.search()
+                return getattr(response, "voices", response)
+
             loop = asyncio.get_event_loop()
             voice_list = await loop.run_in_executor(None, _get_voices)
-            
+
             return [
                 {
-                    "name": voice.name,
-                    "voice_id": voice.voice_id,
-                    "category": voice.category,
-                    "description": getattr(voice, 'description', '')
+                    "name": getattr(v, "name", getattr(v, "voice", "")),
+                    "voice_id": getattr(v, "voice_id", ""),
+                    "category": getattr(v, "category", ""),
+                    "description": getattr(v, "description", ""),
                 }
-                for voice in voice_list
+                for v in voice_list
             ]
         
         except Exception as e:
@@ -85,4 +95,4 @@ class ElevenLabsService:
     
     def is_available(self) -> bool:
         """Check if the service is properly configured"""
-        return bool(self.api_key) 
+        return self.client is not None 

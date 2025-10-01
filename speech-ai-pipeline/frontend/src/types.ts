@@ -23,6 +23,11 @@ export interface PipelineStatus {
   tts: { [key: string]: boolean };
 }
 
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 export interface ProcessingResult {
   audioUrl: string;
   metadata: {

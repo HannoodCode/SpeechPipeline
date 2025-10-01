@@ -16,7 +16,7 @@ import { AudioOutput } from './components/AudioOutput';
 import { StatusIndicator } from './components/StatusIndicator';
 import { TextInput } from './components/TextInput';
 import { getProviders, getPipelineStatus } from './api';
-import { Provider, PipelineStatus } from './types';
+import { Provider, PipelineStatus, ChatMessage } from './types';
 
 function App() {
   const [providers, setProviders] = useState<{
@@ -33,7 +33,7 @@ function App() {
 
   const [selectedModels, setSelectedModels] = useState({
     llm: 'gpt-3.5-turbo', // Default fallback
-    stt_language: 'en-US',
+    stt_language: 'en',
     tts_voice: '',
     tts_language: 'en-US'
   });
@@ -43,6 +43,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [audioResponse, setAudioResponse] = useState<string | null>(null);
   const [responseMetadata, setResponseMetadata] = useState<any>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     loadProviders();
@@ -124,7 +125,7 @@ function App() {
             🎤 AI Speech Pipeline
           </Typography>
           <Chip 
-            label="Portfolio Demo" 
+            label="Made By Mohannad Basyouni" 
             color="secondary" 
             variant="outlined"
             sx={{ color: 'white', borderColor: 'white' }}
@@ -190,6 +191,8 @@ function App() {
                 onProcessingStart={handleProcessingStart}
                 onProcessingComplete={handleProcessingComplete}
                 onProcessingError={handleProcessingError}
+                messages={messages}
+                onUpdateMessages={setMessages}
               />
             </Paper>
           </Grid>
@@ -206,6 +209,8 @@ function App() {
                 onProcessingStart={handleProcessingStart}
                 onProcessingComplete={handleProcessingComplete}
                 onProcessingError={handleProcessingError}
+                messages={messages}
+                onUpdateMessages={setMessages}
               />
             </Paper>
           </Grid>

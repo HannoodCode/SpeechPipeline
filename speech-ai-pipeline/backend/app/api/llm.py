@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Form, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, Dict, Any
+import json
 
 from app.services.llm.openai_service import OpenAIService
 from app.services.llm.anthropic_service import AnthropicService
@@ -15,6 +16,7 @@ ollama_service = None
 
 def get_openai_service():
     global openai_service
+    
     if openai_service is None:
         openai_service = OpenAIService()
     return openai_service
@@ -122,7 +124,7 @@ async def get_llm_providers():
 
 @router.post("/chat")
 async def chat_conversation(
-    messages: list = Form(...),
+    messages: str = Form(...),
     provider: str = Form(...),
     model: Optional[str] = Form(None),
     max_tokens: Optional[int] = Form(150),
@@ -139,24 +141,31 @@ async def chat_conversation(
     """
     
     try:
+        # Parse messages JSON string
+        try:
+            parsed_messages = json.loads(messages) if isinstance(messages, str) else messages
+            if not isinstance(parsed_messages, list):
+                raise ValueError("messages must be a JSON array")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid messages format: {e}")
         # Route to appropriate service
         if provider == "openai":
             result = await get_openai_service().chat(
-                messages=messages,
+                messages=parsed_messages,
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature
             )
         elif provider == "anthropic":
             result = await get_anthropic_service().chat(
-                messages=messages,
+                messages=parsed_messages,
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature
             )
         elif provider == "ollama":
             result = await get_ollama_service().chat(
-                messages=messages,
+                messages=parsed_messages,
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature

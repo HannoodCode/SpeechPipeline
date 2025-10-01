@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Provider, PipelineStatus } from './types';
+import { Provider, PipelineStatus, ChatMessage } from './types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
@@ -66,6 +66,7 @@ export const processFullPipeline = async (
     tts_language?: string;
     tts_speed?: number;
     tts_pitch?: number;
+    llm_messages?: ChatMessage[];
   }
 ): Promise<{ blob: Blob; headers: any }> => {
   const formData = new FormData();
@@ -73,7 +74,11 @@ export const processFullPipeline = async (
   
   Object.entries(config).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      formData.append(key, value.toString());
+      if (key === 'llm_messages' && Array.isArray(value)) {
+        formData.append('llm_messages', JSON.stringify(value));
+      } else {
+        formData.append(key, value.toString());
+      }
     }
   });
 
@@ -104,6 +109,7 @@ export const processTextPipeline = async (
     tts_language?: string;
     tts_speed?: number;
     tts_pitch?: number;
+    llm_messages?: ChatMessage[];
   }
 ): Promise<{ blob: Blob; headers: any }> => {
   const formData = new FormData();
@@ -111,7 +117,11 @@ export const processTextPipeline = async (
   
   Object.entries(config).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      formData.append(key, value.toString());
+      if (key === 'llm_messages' && Array.isArray(value)) {
+        formData.append('llm_messages', JSON.stringify(value));
+      } else {
+        formData.append(key, value.toString());
+      }
     }
   });
 

@@ -2,6 +2,7 @@ import edge_tts
 from typing import List, Dict, Optional
 import tempfile
 import asyncio
+from app.utils.text_utils import strip_all_markup
 
 class EdgeTTSService:
     def __init__(self):
@@ -29,22 +30,20 @@ class EdgeTTSService:
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
             temp_file.close()
             
-            # Build SSML with speed and pitch
+            # Compute rate/pitch strings
             rate = f"{int((speed - 1) * 100):+d}%" if speed != 1.0 else "+0%"
             pitch_value = f"{int(pitch):+d}Hz" if pitch != 0.0 else "+0Hz"
-            
-            ssml_text = f"""
-            <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{language}">
-                <voice name="{voice_to_use}">
-                    <prosody rate="{rate}" pitch="{pitch_value}">
-                        {text}
-                    </prosody>
-                </voice>
-            </speak>
-            """
-            
-            # Create TTS communication
-            communicate = edge_tts.Communicate(ssml_text, voice_to_use)
+
+            # Use plain text (not SSML) to avoid tags being read; sanitize markup
+            plain_text = strip_all_markup(text)
+
+            # Create TTS communication using parameters
+            communicate = edge_tts.Communicate(
+                plain_text,
+                voice=voice_to_use,
+                rate=rate,
+                pitch=pitch_value,
+            )
             
             # Generate and save audio
             await communicate.save(temp_file.name)

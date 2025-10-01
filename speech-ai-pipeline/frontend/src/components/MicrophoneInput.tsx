@@ -14,7 +14,7 @@ import {
   Stop,
 } from '@mui/icons-material';
 import { processFullPipeline } from '../api';
-import { SelectedProviders, SelectedModels } from '../types';
+import { SelectedProviders, SelectedModels, ChatMessage } from '../types';
 
 interface MicrophoneInputProps {
   selectedProviders: SelectedProviders;
@@ -23,6 +23,8 @@ interface MicrophoneInputProps {
   onProcessingStart: () => void;
   onProcessingComplete: (audioUrl: string, metadata: any) => void;
   onProcessingError: (error: string) => void;
+  messages: ChatMessage[];
+  onUpdateMessages: (messages: ChatMessage[]) => void;
 }
 
 export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
@@ -32,6 +34,8 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
   onProcessingStart,
   onProcessingComplete,
   onProcessingError,
+  messages,
+  onUpdateMessages,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -41,6 +45,8 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [blobMimeType, setBlobMimeType] = useState<string>('');
+  const recordedBlobRef = useRef<Blob | null>(null);
 
   useEffect(() => {
     return () => {
@@ -57,18 +63,40 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      // Prefer WebM/Opus when available; fall back to default
+      const preferredMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg'
+      ];
+      let recorder: MediaRecorder | null = null;
+      for (const mt of preferredMimeTypes) {
+        if ((window as any).MediaRecorder && (MediaRecorder as any).isTypeSupported?.(mt)) {
+          try {
+            recorder = new MediaRecorder(stream, { mimeType: mt });
+            break;
+          } catch {}
+        }
+      }
+      mediaRecorderRef.current = recorder || new MediaRecorder(stream);
       audioChunksRef.current = [];
+      recordedBlobRef.current = null;
       
       mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
       
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const mt = mediaRecorderRef.current?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mt });
+        recordedBlobRef.current = audioBlob;
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setHasAudio(true);
+        setBlobMimeType(mt);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -91,6 +119,7 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      try { mediaRecorderRef.current.requestData?.(); } catch {}
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
@@ -102,21 +131,34 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
   };
 
   const processAudio = async () => {
-    if (!audioUrl) return;
+    if (!hasAudio) return;
     
     try {
       onProcessingStart();
       
-      // Convert blob URL back to File
-      const response = await fetch(audioUrl);
-      const blob = await response.blob();
-      const audioFile = new File([blob], 'recording.wav', { type: 'audio/wav' });
+      // Use recorded Blob directly if available
+      let blob: Blob | null = recordedBlobRef.current;
+      if (!blob && audioUrl) {
+        const response = await fetch(audioUrl);
+        blob = await response.blob();
+      }
+      if (!blob) {
+        throw new Error('No recorded audio to process');
+      }
       
+      const mt = blobMimeType || blob.type || 'audio/webm';
+      let ext = 'webm';
+      if (mt.includes('ogg')) ext = 'ogg';
+      else if (mt.includes('wav')) ext = 'wav';
+      const audioFile = new File([blob], `recording.${ext}` , { type: mt });
+      
+      // Normalize STT language to ISO-639-1 for Whisper (e.g., en, fr)
+      const sttLang = (selectedModels.stt_language || 'en').split('-')[0].toLowerCase();
       const result = await processFullPipeline(audioFile, {
         stt_provider: selectedProviders.stt,
         llm_provider: selectedProviders.llm,
         tts_provider: selectedProviders.tts,
-        stt_language: selectedModels.stt_language,
+        stt_language: sttLang,
         llm_model: selectedModels.llm,
         tts_language: selectedModels.tts_language,
         tts_voice: selectedModels.tts_voice,
@@ -125,6 +167,7 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
         llm_temperature: 0.7,
         tts_speed: 1.0,
         tts_pitch: 0.0,
+        llm_messages: messages,
       });
       
       const responseAudioUrl = URL.createObjectURL(result.blob);
@@ -139,6 +182,17 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
       };
       
       onProcessingComplete(responseAudioUrl, metadata);
+      // Update chat history
+      const userText = metadata.transcribedText || '';
+      const assistantText = metadata.responseText || '';
+      if (userText || assistantText) {
+        const updated: ChatMessage[] = [
+          ...messages,
+          ...(userText ? [{ role: 'user' as const, content: userText as string }] : []),
+          ...(assistantText ? [{ role: 'assistant' as const, content: assistantText as string }] : []),
+        ];
+        onUpdateMessages(updated);
+      }
       
       // Clear the recorded audio
       setAudioUrl(null);
@@ -194,7 +248,7 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
       {audioUrl && (
         <Box sx={{ mb: 2 }}>
           <audio controls style={{ width: '100%' }}>
-            <source src={audioUrl} type="audio/wav" />
+            <source src={audioUrl} type={blobMimeType || 'audio/webm'} />
             Your browser does not support the audio element.
           </audio>
         </Box>
@@ -259,16 +313,7 @@ export const MicrophoneInput: React.FC<MicrophoneInputProps> = ({
         </Box>
       )}
 
-      {/* Instructions */}
-      <Box sx={{ mt: 'auto', pt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          📱 Click "Start Recording" to begin capturing audio
-          <br />
-          🎯 The audio will be processed through your selected providers
-          <br />
-          🔊 You'll hear the AI's response when processing completes
-        </Typography>
-      </Box>
+      {/* Instructions removed as requested */}
     </Box>
   );
 }; 

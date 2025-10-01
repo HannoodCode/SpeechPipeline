@@ -1,5 +1,34 @@
 node_modules
 venv
+/.venv
+backend/.venv/
 *.pyc
 __pycache__
 .DS_Store
+*.log
+
+# IDE/editor
+.idea/
+.vscode/
+
+# Environment and credentials (do NOT commit secrets)
+backend/.env
+backend/env.local
+backend/credentials.json
+backend/app/credentials.json
+frontend/.env
+frontend/.env.local
+
+# OS/Editor temp files
+*.swp
+*.swo
+Thumbs.db
+
+# Build artifacts
+frontend/build/
+frontend/dist/
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# Media/test outputs
+/test_response.mp3

@@ -7,7 +7,33 @@ class AnthropicService:
     def __init__(self):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         self.client = Anthropic(api_key=api_key) if api_key else None
-        self.default_model = "claude-3-haiku-20240307"
+        # Default to a widely available recent model
+        self.default_model = "claude-3-7-sonnet-20250219"
+        # Map friendly names/aliases to exact API model IDs
+        self.model_aliases: Dict[str, str] = {
+            "sonnet-3.7": "claude-3-7-sonnet-20250219",
+            "claude-3.7-sonnet": "claude-3-7-sonnet-20250219",
+            "claude-3-7-sonnet": "claude-3-7-sonnet-20250219",
+            "sonnet-4": "claude-sonnet-4-20250514",
+            "claude-sonnet-4": "claude-sonnet-4-20250514",
+            "opus-4": "claude-opus-4-20250514",
+            "claude-opus-4": "claude-opus-4-20250514",
+            "opus-4.1": "claude-opus-4-1-20250805",
+            "claude-opus-4.1": "claude-opus-4-1-20250805",
+            "haiku-3.5": "claude-3-5-haiku-20241022",
+            "claude-3.5-haiku": "claude-3-5-haiku-20241022",
+            # legacy
+            "haiku-3": "claude-3-haiku-20240307",
+            "claude-3-haiku": "claude-3-haiku-20240307",
+        }
+
+    def _resolve_model(self, model: Optional[str]) -> str:
+        if not model:
+            return self.default_model
+        # exact string if provided
+        if model in self.model_aliases:
+            return self.model_aliases[model]
+        return model
     
     async def generate(
         self,
@@ -26,7 +52,7 @@ class AnthropicService:
         try:
             def _generate():
                 message = self.client.messages.create(
-                    model=model or self.default_model,
+                    model=self._resolve_model(model),
                     max_tokens=max_tokens,
                     temperature=temperature,
                     system=system_prompt,
@@ -76,7 +102,7 @@ class AnthropicService:
             
             def _chat():
                 message = self.client.messages.create(
-                    model=model or self.default_model,
+                    model=self._resolve_model(model),
                     max_tokens=max_tokens,
                     temperature=temperature,
                     system=system_message or "You are a helpful AI assistant.",

@@ -3,11 +3,40 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
+import logging
+import sys
+import time
+import uuid
 
 from app.api import stt, llm, tts, pipeline
 
 # Load environment variables
-load_dotenv()
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ENV_PATH = os.path.join(BASE_DIR, ".env")
+load_dotenv(ENV_PATH)
+
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    stream=sys.stdout,
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+)
+logger = logging.getLogger("app")
+
+# Normalize GOOGLE_APPLICATION_CREDENTIALS to absolute path if provided relatively
+gcred = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if gcred:
+    if not os.path.isabs(gcred):
+        abs_path = os.path.abspath(os.path.join(BASE_DIR, gcred))
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = abs_path
+        logger.info("Configured GOOGLE_APPLICATION_CREDENTIALS (relative → absolute)")
+    else:
+        logger.info("Configured GOOGLE_APPLICATION_CREDENTIALS (absolute)")
+    try:
+        exists = os.path.exists(os.environ["GOOGLE_APPLICATION_CREDENTIALS"])
+        logger.info(f"GOOGLE_APPLICATION_CREDENTIALS file exists: {exists}")
+    except Exception:
+        pass
 
 app = FastAPI(
     title="AI Speech Pipeline API",
@@ -28,6 +57,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def request_logging_middleware(request, call_next):
+    request_id = str(uuid.uuid4())
+    setattr(request.state, "request_id", request_id)
+    start = time.time()
+    logger.info(f"[{request_id}] → {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        duration_ms = int((time.time() - start) * 1000)
+        response.headers["X-Trace-Id"] = request_id
+        logger.info(f"[{request_id}] ← {response.status_code} {request.url.path} ({duration_ms}ms)")
+        return response
+    except Exception as e:
+        duration_ms = int((time.time() - start) * 1000)
+        logger.exception(f"[{request_id}] ✖ Unhandled error after {duration_ms}ms: {e}")
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error", "trace_id": request_id}, headers={"X-Trace-Id": request_id})
 
 # Include routers
 app.include_router(stt.router, prefix="/api/stt", tags=["Speech-to-Text"])
@@ -78,8 +124,8 @@ async def get_providers():
             {
                 "name": "anthropic",
                 "display_name": "Anthropic Claude",
-                "models": ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
-                "default_model": "claude-3-haiku-20240307",
+                "models": ["claude-3-7-sonnet-20250219", "claude-sonnet-4-20250514", "claude-opus-4-20250514"],
+                "default_model": "claude-3-7-sonnet-20250219",
                 "description": "Anthropic's Claude models"
             },
             {

@@ -5,18 +5,18 @@
 echo "🎤 Starting AI Speech Pipeline Backend..."
 
 # Check if virtual environment exists
-if [ ! -d "venv" ]; then
+if [ ! -d ".venv" ]; then
     echo "📦 Creating virtual environment..."
-    python -m venv venv
+    uv venv
 fi
 
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
-source venv/bin/activate
+source .venv/Scripts/activate
 
 # Install dependencies
 echo "📚 Installing dependencies..."
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # Check if .env file exists
 if [ ! -f ".env" ]; then

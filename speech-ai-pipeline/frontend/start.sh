@@ -3,6 +3,9 @@
 # AI Speech Pipeline Frontend Startup Script
 
 echo "🌐 Starting AI Speech Pipeline Frontend..."
+export HOST=localhost
+export DANGEROUSLY_DISABLE_HOST_CHECK=true
+export PORT=3000
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then

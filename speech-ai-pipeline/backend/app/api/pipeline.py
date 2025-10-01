@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from typing import Optional
 import tempfile
 import os
+import logging
+import json
 
 from app.services.stt.whisper_service import WhisperService
 from app.services.stt.google_service import GoogleSTTService
@@ -16,8 +18,10 @@ from app.services.tts.google_service import GoogleTTSService
 from app.services.tts.elevenlabs_service import ElevenLabsService
 from app.services.tts.edge_service import EdgeTTSService
 from app.services.tts.gtts_service import GTTSService
+from app.utils.text_utils import strip_all_markup
 
 router = APIRouter()
+logger = logging.getLogger("pipeline")
 
 # Initialize all services lazily
 stt_services = {}
@@ -67,6 +71,7 @@ async def process_full_pipeline(
     llm_system_prompt: Optional[str] = Form("You are a helpful AI assistant. Provide clear, concise responses."),
     llm_max_tokens: Optional[int] = Form(150),
     llm_temperature: Optional[float] = Form(0.7),
+    llm_messages: Optional[str] = Form(None),
     tts_voice: Optional[str] = Form(None),
     tts_language: Optional[str] = Form("en-US"),
     tts_speed: Optional[float] = Form(1.0),
@@ -83,23 +88,42 @@ async def process_full_pipeline(
     - Additional parameters for each service...
     """
     
+    trace_id = getattr(getattr(audio, "scope", None), "trace_id", None)
+    # For FastAPI, use request middleware to inject request.state.request_id; we can't access request here
+    # so we will log without it; middleware already logs the request and sets X-Trace-Id on the response
     if not audio.content_type.startswith('audio/'):
         raise HTTPException(status_code=400, detail="File must be an audio file")
     
     # Save uploaded audio file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{audio.filename.split('.')[-1]}") as temp_audio:
         content = await audio.read()
+        logger.info(f"Upload received: type={audio.content_type}, name={audio.filename}, size={len(content)} bytes")
         temp_audio.write(content)
         temp_audio_path = temp_audio.name
     
     try:
+        logger.info(f"Pipeline start: stt={stt_provider}, llm={llm_provider}, tts={tts_provider}")
         # Step 1: Speech-to-Text
         stt_service = get_stt_service(stt_provider)
         if not stt_service:
             raise HTTPException(status_code=400, detail=f"Unknown STT provider: {stt_provider}")
         
+        logger.info("STT: transcribing audio")
         stt_result = await stt_service.transcribe(temp_audio_path, stt_language)
         transcribed_text = stt_result.get("text", "")
+        logger.info(f"STT: done, confidence={stt_result.get('confidence')}")
+        
+        # Fallback to Whisper if no text detected
+        if not transcribed_text.strip():
+            whisper = get_stt_service("whisper")
+            if whisper and whisper.is_available():
+                logger.info("STT: primary returned empty. Falling back to Whisper...")
+                try:
+                    stt_result = await whisper.transcribe(temp_audio_path, stt_language)
+                    transcribed_text = stt_result.get("text", "")
+                    logger.info(f"Whisper fallback: confidence={stt_result.get('confidence')}")
+                except Exception as e:
+                    logger.warning(f"Whisper fallback failed: {e}")
         
         if not transcribed_text.strip():
             raise HTTPException(status_code=400, detail="No speech detected in audio")
@@ -109,14 +133,42 @@ async def process_full_pipeline(
         if not llm_service:
             raise HTTPException(status_code=400, detail=f"Unknown LLM provider: {llm_provider}")
         
-        llm_result = await llm_service.generate(
-            text=transcribed_text,
-            model=llm_model,
-            max_tokens=llm_max_tokens,
-            temperature=llm_temperature,
-            system_prompt=llm_system_prompt
-        )
+        logger.info(f"LLM: generating with model={llm_model} temp={llm_temperature}")
+        # If chat history is provided, use chat flow; otherwise single-turn generate
+        parsed_messages = None
+        if llm_messages:
+            try:
+                parsed_messages = json.loads(llm_messages)
+                if not isinstance(parsed_messages, list):
+                    parsed_messages = None
+            except Exception:
+                parsed_messages = None
+
+        if parsed_messages:
+            # Ensure system prompt is prepended if provided and not already present
+            messages = parsed_messages[:]
+            if llm_system_prompt and (len(messages) == 0 or messages[0].get("role") != "system"):
+                messages = [{"role": "system", "content": llm_system_prompt}] + messages
+            # If last turn isn't the current user text, append it
+            if not (len(messages) > 0 and messages[-1].get("role") == "user" and messages[-1].get("content") == transcribed_text):
+                messages.append({"role": "user", "content": transcribed_text})
+
+            llm_result = await llm_service.chat(
+                messages=messages,
+                model=llm_model,
+                max_tokens=llm_max_tokens,
+                temperature=llm_temperature
+            )
+        else:
+            llm_result = await llm_service.generate(
+                text=transcribed_text,
+                model=llm_model,
+                max_tokens=llm_max_tokens,
+                temperature=llm_temperature,
+                system_prompt=llm_system_prompt
+            )
         response_text = llm_result.get("response", "")
+        logger.info("LLM: done")
         
         if not response_text.strip():
             raise HTTPException(status_code=500, detail="LLM generated empty response")
@@ -126,21 +178,25 @@ async def process_full_pipeline(
         if not tts_service:
             raise HTTPException(status_code=400, detail=f"Unknown TTS provider: {tts_provider}")
         
+        logger.info(f"TTS: synthesizing voice={tts_voice} lang={tts_language}")
+        # Sanitize response text to avoid reading markup/HTML
+        safe_response_text = strip_all_markup(response_text)
         if tts_provider == "gtts":
             # gTTS doesn't support voice/pitch parameters
             audio_file = await tts_service.synthesize(
-                text=response_text,
+                text=safe_response_text,
                 language=tts_language,
                 speed=tts_speed
             )
         else:
             audio_file = await tts_service.synthesize(
-                text=response_text,
+                text=safe_response_text,
                 voice=tts_voice,
                 language=tts_language,
                 speed=tts_speed,
                 pitch=tts_pitch
             )
+        logger.info("TTS: done")
         
         # Return the generated audio with metadata
         return FileResponse(
@@ -149,7 +205,7 @@ async def process_full_pipeline(
             filename=f"response_{tts_provider}.mp3",
             headers={
                 "X-Transcribed-Text": transcribed_text,
-                "X-Response-Text": response_text,
+                "X-Response-Text": safe_response_text,
                 "X-STT-Provider": stt_provider,
                 "X-LLM-Provider": llm_provider,
                 "X-TTS-Provider": tts_provider,
@@ -158,8 +214,10 @@ async def process_full_pipeline(
         )
     
     except HTTPException:
+        logger.exception("Pipeline failed with HTTPException")
         raise
     except Exception as e:
+        logger.exception(f"Pipeline processing failed: {e}")
         raise HTTPException(status_code=500, detail=f"Pipeline processing failed: {str(e)}")
     
     finally:
@@ -176,6 +234,7 @@ async def process_text_pipeline(
     llm_system_prompt: Optional[str] = Form("You are a helpful AI assistant. Provide clear, concise responses."),
     llm_max_tokens: Optional[int] = Form(150),
     llm_temperature: Optional[float] = Form(0.7),
+    llm_messages: Optional[str] = Form(None),
     tts_voice: Optional[str] = Form(None),
     tts_language: Optional[str] = Form("en-US"),
     tts_speed: Optional[float] = Form(1.0),
@@ -193,19 +252,46 @@ async def process_text_pipeline(
         raise HTTPException(status_code=400, detail="Input text cannot be empty")
     
     try:
+        logger.info(f"Text pipeline start: llm={llm_provider}, tts={tts_provider}")
         # Step 1: Language Model Processing
         llm_service = get_llm_service(llm_provider)
         if not llm_service:
             raise HTTPException(status_code=400, detail=f"Unknown LLM provider: {llm_provider}")
         
-        llm_result = await llm_service.generate(
-            text=text,
-            model=llm_model,
-            max_tokens=llm_max_tokens,
-            temperature=llm_temperature,
-            system_prompt=llm_system_prompt
-        )
+        logger.info(f"LLM: generating with model={llm_model} temp={llm_temperature}")
+        # If chat history is provided, use chat flow; otherwise single-turn generate
+        parsed_messages = None
+        if llm_messages:
+            try:
+                parsed_messages = json.loads(llm_messages)
+                if not isinstance(parsed_messages, list):
+                    parsed_messages = None
+            except Exception:
+                parsed_messages = None
+
+        if parsed_messages:
+            messages = parsed_messages[:]
+            if llm_system_prompt and (len(messages) == 0 or messages[0].get("role") != "system"):
+                messages = [{"role": "system", "content": llm_system_prompt}] + messages
+            if not (len(messages) > 0 and messages[-1].get("role") == "user" and messages[-1].get("content") == text):
+                messages.append({"role": "user", "content": text})
+
+            llm_result = await llm_service.chat(
+                messages=messages,
+                model=llm_model,
+                max_tokens=llm_max_tokens,
+                temperature=llm_temperature
+            )
+        else:
+            llm_result = await llm_service.generate(
+                text=text,
+                model=llm_model,
+                max_tokens=llm_max_tokens,
+                temperature=llm_temperature,
+                system_prompt=llm_system_prompt
+            )
         response_text = llm_result.get("response", "")
+        logger.info("LLM: done")
         
         if not response_text.strip():
             raise HTTPException(status_code=500, detail="LLM generated empty response")
@@ -215,6 +301,7 @@ async def process_text_pipeline(
         if not tts_service:
             raise HTTPException(status_code=400, detail=f"Unknown TTS provider: {tts_provider}")
         
+        logger.info(f"TTS: synthesizing voice={tts_voice} lang={tts_language}")
         if tts_provider == "gtts":
             # gTTS doesn't support voice/pitch parameters
             audio_file = await tts_service.synthesize(
@@ -230,6 +317,7 @@ async def process_text_pipeline(
                 speed=tts_speed,
                 pitch=tts_pitch
             )
+        logger.info("TTS: done")
         
         # Return the generated audio with metadata
         return FileResponse(
@@ -245,8 +333,10 @@ async def process_text_pipeline(
         )
     
     except HTTPException:
+        logger.exception("Text pipeline failed with HTTPException")
         raise
     except Exception as e:
+        logger.exception(f"Text pipeline processing failed: {e}")
         raise HTTPException(status_code=500, detail=f"Pipeline processing failed: {str(e)}")
 
 @router.get("/status")

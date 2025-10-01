@@ -8,6 +8,7 @@ from app.services.tts.google_service import GoogleTTSService
 from app.services.tts.elevenlabs_service import ElevenLabsService
 from app.services.tts.edge_service import EdgeTTSService
 from app.services.tts.gtts_service import GTTSService
+from app.utils.text_utils import strip_all_markup
 
 router = APIRouter()
 
@@ -66,9 +67,10 @@ async def synthesize_speech(
     
     try:
         # Route to appropriate service
+        safe_text = strip_all_markup(text)
         if provider == "google":
             audio_file = await get_google_service().synthesize(
-                text=text,
+                text=safe_text,
                 voice=voice,
                 language=language,
                 speed=speed,
@@ -76,14 +78,14 @@ async def synthesize_speech(
             )
         elif provider == "elevenlabs":
             audio_file = await get_elevenlabs_service().synthesize(
-                text=text,
+                text=safe_text,
                 voice=voice,
                 language=language,
                 speed=speed
             )
         elif provider == "edge":
             audio_file = await get_edge_service().synthesize(
-                text=text,
+                text=safe_text,
                 voice=voice,
                 language=language,
                 speed=speed,
@@ -91,7 +93,7 @@ async def synthesize_speech(
             )
         elif provider == "gtts":
             audio_file = await get_gtts_service().synthesize(
-                text=text,
+                text=safe_text,
                 language=language,
                 speed=speed
             )
@@ -101,8 +103,8 @@ async def synthesize_speech(
         # Return the audio file
         return FileResponse(
             audio_file,
-            media_type="audio/wav",
-            filename=f"speech_{provider}.wav",
+            media_type="audio/mpeg",
+            filename=f"speech_{provider}.mp3",
             headers={"X-Provider": provider}
         )
     
