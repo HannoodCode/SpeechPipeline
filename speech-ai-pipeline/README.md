@@ -1,19 +1,19 @@
 
-# 🎤 AI Speech Pipeline
+# AI Speech Pipeline
 
 A modular, full-stack application that processes speech through a customizable AI pipeline: **Speech-to-Text → Language Model → Text-to-Speech**. Built with FastAPI backend and React frontend.
 
-## ✨ Features
+## Features
 
-- **🎤 Speech Input**: Record audio directly in the browser
-- **✏️ Text Input**: Type messages for text-only processing
-- **🔄 Modular Architecture**: Choose from multiple providers for each step
-- **🎯 Real-time Processing**: Stream audio through the complete pipeline
-- **📊 Service Status**: Monitor which providers are available
-- **💾 Audio Download**: Save AI responses as MP3 files
-- **📱 Modern UI**: Responsive design with Material-UI
+- **Speech Input**: Record audio directly in the browser
+- **Text Input**: Type messages for text-only processing
+- **Modular Architecture**: Choose from multiple providers for each step
+- **Real-time Processing**: Stream audio through the complete pipeline
+- **Service Status**: Monitor which providers are available
+- **Audio Download**: Save AI responses as MP3 files
+- **Modern UI**: Responsive design with Material-UI
 
-## 🏗️ Architecture
+## Architecture
 
 ### Speech-to-Text (STT) Providers
 - **OpenAI Whisper** - Industry-leading accuracy
@@ -59,7 +59,7 @@ speech-ai-pipeline/
 └── README.md              # This file
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -186,7 +186,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 - `GET /api/llm/providers` - LLM provider details
 - `GET /api/tts/providers` - TTS provider details
 
-## 🎯 Usage Examples
+## Usage Examples
 
 ### Basic Voice Interaction
 1. Select your preferred providers (e.g., Whisper + OpenAI + ElevenLabs)
@@ -266,7 +266,7 @@ pytest                         # Run tests (when implemented)
 - [ ] Multi-language auto-detection
 - [ ] Cost tracking and analytics
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -274,11 +274,11 @@ pytest                         # Run tests (when implemented)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **OpenAI** for Whisper and GPT models
 - **Anthropic** for Claude models
@@ -292,8 +292,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Demo**: [Live Demo](your-demo-url)
 - **Documentation**: [API Docs](http://localhost:8000/docs)
-- **Portfolio**: [Your Portfolio](your-portfolio-url)
-
----
-
-**Built with ❤️ for AI enthusiasts and developers** 
+- **Portfolio**: [Your Portfolio](https://github.com/HannoodCode)
