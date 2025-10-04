@@ -12,6 +12,9 @@ A modular, full-stack application that processes speech through a customizable A
 - **Service Status**: Monitor which providers are available
 - **Audio Download**: Save AI responses as MP3 files
 - **Modern UI**: Responsive design with Material-UI
+- **Theme Support**: Light/dark mode toggle with smooth transitions
+- **Side-by-Side Layout**: Compare input and output simultaneously
+- **Responsive Design**: Optimized for desktop and mobile devices
 
 ## Architecture
 
@@ -52,9 +55,23 @@ speech-ai-pipeline/
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # UI components
+│   │   │   ├── MicrophoneInput.tsx # Voice recording component
+│   │   │   ├── TextInput.tsx      # Text input component
+│   │   │   ├── AudioOutput.tsx    # Audio playback component
+│   │   │   ├── ModelSelector.tsx  # Provider selection component
+│   │   │   ├── StatusIndicator.tsx # Service status component
+│   │   │   └── Footer.tsx         # Footer component
+│   │   ├── pages/         # Page components
+│   │   │   ├── Landing.tsx        # Homepage with centered content
+│   │   │   ├── Dashboard.tsx      # Main demo page with side-by-side layout
+│   │   │   └── About.tsx          # About page
+│   │   ├── theme/         # Theme configuration
+│   │   │   └── ColorModeProvider.tsx # Light/dark mode provider
 │   │   ├── api.ts         # Backend API client
 │   │   ├── types.ts       # TypeScript type definitions
-│   │   └── App.tsx        # Main application component
+│   │   └── App.tsx        # Main application component with Material-UI navigation
+│   ├── public/
+│   │   └── logo.png       # Application logo
 │   └── package.json       # Node.js dependencies
 └── README.md              # This file
 ```
@@ -110,7 +127,7 @@ npm start
 
 The frontend will be available at `http://localhost:3000`
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -189,16 +206,24 @@ OLLAMA_BASE_URL=http://localhost:11434
 ## Usage Examples
 
 ### Basic Voice Interaction
-1. Select your preferred providers (e.g., Whisper + OpenAI + ElevenLabs)
-2. Click "Start Recording" and speak your message
-3. Click "Stop Recording" then "Process Audio"
-4. Listen to the AI's response
+1. Navigate to the Demo page using the top navigation
+2. Select your preferred providers (e.g., Whisper + OpenAI + ElevenLabs)
+3. Click "Start Recording" and speak your message in the Voice Input card
+4. Click "Stop Recording" then "Process Audio"
+5. Listen to the AI's response in the AI Response card (right side)
 
 ### Text Chat
-1. Choose LLM and TTS providers
-2. Type your message in the text input
+1. Choose LLM and TTS providers from the configuration panel
+2. Type your message in the Text Input card (center)
 3. Click "Process Text" or use Ctrl+Enter
-4. Hear the AI's spoken response
+4. Hear the AI's spoken response in the AI Response card (right side)
+
+### UI Features
+- **Side-by-Side Layout**: Voice Input (left), Text Input (center), AI Response (right)
+- **Theme Toggle**: Switch between light and dark modes using the toggle in the top-right
+- **Responsive Design**: Cards stack vertically on mobile, side-by-side on desktop
+- **Material-UI Navigation**: Clean top navigation bar with Home, Demo, and About links
+- **Real-time Status**: Monitor service availability and processing status
 
 ### Custom Configuration
 - Change providers mid-conversation
@@ -206,7 +231,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 - Select different voices for varied experiences
 - Monitor service status in real-time
 
-## 🚢 Deployment
+## Deployment
 
 ### Docker Deployment (Coming Soon)
 ```bash
@@ -219,7 +244,7 @@ docker-compose up --build
 2. **Frontend**: Build with `npm run build` and serve static files
 3. **Environment**: Set production API keys and endpoints
 
-## 🛠️ Development
+## Development
 
 ### Adding New Providers
 
@@ -253,10 +278,12 @@ uvicorn app.main:app --reload  # Development server with auto-reload
 pytest                         # Run tests (when implemented)
 ```
 
-## 📋 TODO / Roadmap
+## 📋 Roadmap
 
+- [x] Modern UI with Material-UI navigation
+- [x] Light/dark theme support with smooth transitions
+- [x] Responsive design for mobile and desktop
 - [ ] Docker containerization
-- [ ] Authentication and user accounts
 - [ ] Conversation history
 - [ ] Voice cloning integration
 - [ ] Real-time streaming pipeline
@@ -264,7 +291,6 @@ pytest                         # Run tests (when implemented)
 - [ ] Mobile app (React Native)
 - [ ] Voice activity detection
 - [ ] Multi-language auto-detection
-- [ ] Cost tracking and analytics
 
 ## Contributing
 
@@ -285,8 +311,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Google Cloud** for Speech APIs
 - **Microsoft** for Azure Speech Services
 - **ElevenLabs** for premium voice synthesis
-- **Material-UI** for React components
+- **Material-UI** for React components and theming
 - **FastAPI** for the excellent Python web framework
+- **React Router** for client-side routing
 
 ## 🔗 Links
 
