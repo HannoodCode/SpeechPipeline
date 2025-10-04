@@ -108,7 +108,7 @@ export const TextInput: React.FC<TextInputProps> = ({
       {/* Text Input */}
       <TextField
         multiline
-        rows={8}
+        rows={5}
         fullWidth
         variant="outlined"
         placeholder="Type your message here... (Ctrl+Enter to send)"

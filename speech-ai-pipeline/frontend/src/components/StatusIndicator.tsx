@@ -38,7 +38,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   if (!status) {
     return (
       <Paper sx={{ p: 2, bgcolor: 'warning.light' }}>
-        <Typography variant="body2">
+        <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.87)' }}>
           Loading service status...
         </Typography>
       </Paper>
@@ -46,9 +46,9 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   }
 
   const serviceCategories = [
-    { key: 'stt', label: '🎤 Speech-to-Text', services: status.stt },
-    { key: 'llm', label: '🧠 Language Models', services: status.llm },
-    { key: 'tts', label: '🔊 Text-to-Speech', services: status.tts },
+    { key: 'stt', label: 'Speech-to-Text', services: status.stt },
+    { key: 'llm', label: 'Language Models', services: status.llm },
+    { key: 'tts', label: 'Text-to-Speech', services: status.tts },
   ];
 
   return (
@@ -96,7 +96,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       {/* Overall Status Summary */}
       <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="body2" color="text.secondary">
-          💡 <strong>Tip:</strong> Services marked with ❌ require API keys or additional setup. 
+           Services marked with ❌ require API keys or additional setup. 
           Check the README for configuration instructions.
         </Typography>
       </Box>

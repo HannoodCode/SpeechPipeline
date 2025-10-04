@@ -1,29 +1,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import ColorModeProvider from './theme/ColorModeProvider';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 600,
-    },
-  },
-});
+// Ensure consistent scrollbar behavior across all pages
+const style = document.createElement('style');
+style.textContent = `
+  html {
+    overflow-y: scroll; /* Always show vertical scrollbar */
+  }
+`;
+document.head.appendChild(style);
+
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -31,9 +20,9 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
+    <ColorModeProvider>
       <CssBaseline />
       <App />
-    </ThemeProvider>
+    </ColorModeProvider>
   </React.StrictMode>
-); 
+);

@@ -40,7 +40,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         {/* STT Provider Selection */}
         <Grid item xs={12} md={4}>
           <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            🎤 Speech-to-Text
+            Speech-to-Text
           </Typography>
           
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -81,7 +81,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         {/* LLM Provider Selection */}
         <Grid item xs={12} md={4}>
           <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            🧠 Language Model
+            Language Model
           </Typography>
           
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -122,7 +122,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         {/* TTS Provider Selection */}
         <Grid item xs={12} md={4}>
           <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            🔊 Text-to-Speech
+           Text-to-Speech
           </Typography>
           
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -190,10 +190,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
       {/* Pipeline Flow Visualization */}
       <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Selected Pipeline:
+        <Typography variant="subtitle2" align="center" gutterBottom>
+          Selected Pipeline
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Chip label={getSelectedProvider('stt')?.display_name} color="primary" variant="outlined" />
           <Typography variant="body2">→</Typography>
           <Chip label={getSelectedProvider('llm')?.display_name} color="secondary" variant="outlined" />

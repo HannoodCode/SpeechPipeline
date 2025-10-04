@@ -81,7 +81,7 @@ export const AudioOutput: React.FC<AudioOutputProps> = ({
       <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6">
-            🎵 AI Response
+            AI Response
           </Typography>
           <Button
             variant="outlined"
@@ -111,7 +111,7 @@ export const AudioOutput: React.FC<AudioOutputProps> = ({
           {(metadata.transcribedText || metadata.inputText) && (
             <Alert severity="info">
               <Typography variant="subtitle2" gutterBottom>
-                {metadata.transcribedText ? '🎤 Transcribed Text:' : '✏️ Input Text:'}
+                {metadata.transcribedText ? 'Transcribed Text:' : 'Input Text:'}
               </Typography>
               <Typography variant="body2">
                 "{metadata.transcribedText || metadata.inputText}"
@@ -132,7 +132,7 @@ export const AudioOutput: React.FC<AudioOutputProps> = ({
           {metadata.responseText && (
             <Alert severity="success">
               <Typography variant="subtitle2" gutterBottom>
-                🤖 AI Response:
+                AI Response:
               </Typography>
               <Typography variant="body2">
                 "{metadata.responseText}"
