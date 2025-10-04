@@ -11,7 +11,7 @@ export const Landing: React.FC = () => {
   const isLight = theme.palette.mode === 'light';
   return (
       <>
-        <Container maxWidth="lg" sx={{ pt: 8, pb: { xs: 1, md: 0.5 } }}>
+        <Container maxWidth="lg" sx={{ pt: 8, pb: { xs: 1, md: 0.5 }, textAlign: 'center' }}>
           <Typography variant="h2" sx={{ fontWeight: 800, letterSpacing: -1, mb: 2 }}>
             Compare. Evaluate. Explore.
           </Typography>
@@ -21,6 +21,7 @@ export const Landing: React.FC = () => {
               color: isLight ? 'text.secondary' : 'rgba(255,255,255,0.8)',
               maxWidth: 760,
               mb: 6,
+              mx: 'auto',
             }}
           >
             A modular platform for side‑by‑side comparison of STT, LLM, and TTS services. 

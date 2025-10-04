@@ -4,7 +4,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 export type ColorMode = 'light' | 'dark';
 
 export const ColorModeContext = React.createContext<{ mode: ColorMode; toggleColorMode: () => void }>({
-  mode: 'dark',
+  mode: 'light',
   toggleColorMode: () => {},
 });
 
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const ColorModeProvider: React.FC<Props> = ({ children }) => {
-  const [mode, setMode] = useState<ColorMode>('dark');
+  const [mode, setMode] = useState<ColorMode>('light');
 
   const theme = useMemo(() => {
     const isDark = mode === 'dark';

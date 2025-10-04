@@ -124,8 +124,8 @@ export const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: { xs: 260, md: 300 } }}>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: { xs: 270, md: 350 } }}>
             <Typography variant="h6" gutterBottom>
                Voice Input
             </Typography>
@@ -142,8 +142,8 @@ export const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: { xs: 260, md: 300 } }}>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: { xs: 270, md: 350 } }}>
             <Typography variant="h6" gutterBottom>
                Text Input
             </Typography>
@@ -160,8 +160,8 @@ export const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: { xs: 270, md: 350 } }}>
             <Typography variant="h6" gutterBottom>
                AI Response
             </Typography>
